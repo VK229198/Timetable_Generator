@@ -1,0 +1,60 @@
+import random
+import copy
+
+# ------------------------------
+# Basic Constants
+# ------------------------------
+
+SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+PERIODS_PER_DAY = 7
+
+# ------------------------------
+# Course Data ( Aribitrary Faculty List)
+# ------------------------------
+
+COURSES = {
+    'Agile': {'faculty': 'Agile_1', 'hours_per_week': 2},
+    'CN': {'faculty': 'CN_1', 'hours_per_week': 3},
+    'IML': {'faculty': 'IML_1', 'hours_per_week': 3},
+    'Cloud': {'faculty': 'Cloud_1', 'hours_per_week': 2},
+    'Calc': {'faculty': 'Calc_1', 'hours_per_week': 3},
+    'AgileLab': {'faculty': 'AgileLab_1', 'hours_per_week': 2},
+    'CNLab': {'faculty': 'CNLab_1', 'hours_per_week': 2},
+    'IMLLab': {'faculty': 'IMLLab_1', 'hours_per_week': 2},
+    'CloudLab': {'faculty': 'CloudLab_1', 'hours_per_week': 2}
+}
+
+LAB_COURSES = ['AgileLab', 'CNLab', 'IMLLab', 'CloudLab']
+
+# ------------------------------
+# Helper: Create Empty Timetable
+# ------------------------------
+
+def create_empty_timetable():
+    timetable = {}
+    for section in SECTIONS:
+        timetable[section] = {}
+        for day in DAYS:
+            timetable[section][day] = [None for _ in range(PERIODS_PER_DAY)]
+    return timetable
+
+# ------------------------------
+# Seed Randomness for Reproducibility
+# ------------------------------
+
+random.seed(42)
+
+# ------------------------------
+# Initialize an Empty Timetable
+# ------------------------------
+
+timetable = create_empty_timetable()
+
+# Just to confirm structure
+for section, schedule in timetable.items():
+    print(f"Section {section}:")
+    for day, periods in schedule.items():
+        print(f"  {day}: {periods}")
+    print("\n")
+
