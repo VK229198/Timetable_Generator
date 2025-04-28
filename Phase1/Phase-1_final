@@ -1,0 +1,156 @@
+import random
+import copy
+
+# ------------------------------
+# Basic Constants
+# ------------------------------
+
+SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+PERIODS_PER_DAY = 7
+
+# ------------------------------
+# Course Data
+# ------------------------------
+
+COURSES = {
+    'Agile': {'faculty': 'Agile_1', 'hours_per_week': 2},
+    'CN': {'faculty': 'CN_1', 'hours_per_week': 3},
+    'IML': {'faculty': 'IML_1', 'hours_per_week': 3},
+    'Cloud': {'faculty': 'Cloud_1', 'hours_per_week': 2},
+    'Calc': {'faculty': 'Calc_1', 'hours_per_week': 3},
+    'AgileLab': {'faculty': 'AgileLab_1', 'hours_per_week': 2},
+    'CNLab': {'faculty': 'CNLab_1', 'hours_per_week': 2},
+    'IMLLab': {'faculty': 'IMLLab_1', 'hours_per_week': 2},
+    'CloudLab': {'faculty': 'CloudLab_1', 'hours_per_week': 2}
+}
+
+LAB_COURSES = ['AgileLab', 'CNLab', 'IMLLab', 'CloudLab']
+
+# ------------------------------
+# Fixed Classes (Minor and Elective)
+# ------------------------------
+
+FIXED_CLASSES = {
+    'Tuesday': {4: 'Minor', 5: 'Minor', 6: 'Minor'},    # periods 5,6,7 (indexes 4,5,6)
+    'Wednesday': {4: 'Elective', 5: 'Elective', 6: 'Elective'},
+    'Thursday': {4: 'Minor', 5: 'Minor', 6: 'Minor'}
+}
+
+# ------------------------------
+# Helper: Create Empty Timetable
+# ------------------------------
+
+def create_empty_timetable():
+    timetable = {}
+    for section in SECTIONS:
+        timetable[section] = {}
+        for day in DAYS:
+            timetable[section][day] = [None for _ in range(PERIODS_PER_DAY)]
+    return timetable
+
+# ------------------------------
+# Seed Randomness for Reproducibility
+# ------------------------------
+
+random.seed(45)
+
+# ------------------------------
+# Initialize an Empty Timetable
+# ------------------------------
+
+timetable = create_empty_timetable()
+
+# ------------------------------
+# Helper: Check if periods are free (for labs)
+# ------------------------------
+
+def are_periods_free(periods_list, start_index, duration):
+    return (
+        start_index + duration <= len(periods_list)
+        and all(periods_list[start_index + i] is None for i in range(duration))
+    )
+
+# ------------------------------
+# Fill Timetable for Each Section
+# ------------------------------
+
+def fill_timetable_correctly(timetable):
+    for section in SECTIONS:
+        # Create a copy of the courses dictionary for each section
+        course_hours_left = copy.deepcopy(COURSES)
+
+        # First fill fixed Minor/Elective periods
+        for day in FIXED_CLASSES:
+            for period_idx, fixed_course in FIXED_CLASSES[day].items():
+                timetable[section][day][period_idx] = fixed_course
+
+        # First allocate labs
+        for lab in LAB_COURSES:
+            lab_hours = course_hours_left[lab]['hours_per_week']
+            while lab_hours > 0:
+                day = random.choice(DAYS)
+                periods = timetable[section][day]
+
+                possible_starts = list(range(PERIODS_PER_DAY - 1))  # -1 because labs need 2 consecutive periods
+                random.shuffle(possible_starts)
+
+                for start in possible_starts:
+                    # Skip if either period is fixed
+                    if day in FIXED_CLASSES and (start in FIXED_CLASSES[day] or (start+1) in FIXED_CLASSES[day]):
+                        continue
+
+                    if are_periods_free(periods, start, 2):
+                        periods[start] = lab
+                        periods[start + 1] = lab
+                        lab_hours -= 2
+                        break
+
+        # Then allocate theory courses
+        for course, data in course_hours_left.items():
+            if course in LAB_COURSES:
+                continue  # Labs already assigned
+
+            hours_needed = data['hours_per_week']
+            while hours_needed > 0:
+                day = random.choice(DAYS)
+                period_idx = random.choice(range(PERIODS_PER_DAY))
+
+                # Skip fixed classes
+                if day in FIXED_CLASSES and period_idx in FIXED_CLASSES[day]:
+                    continue
+
+                if timetable[section][day][period_idx] is None:
+                    timetable[section][day][period_idx] = course
+                    hours_needed -= 1
+
+    return timetable
+
+# ------------------------------
+# Run Correct Filling
+# ------------------------------
+
+filled_timetable = fill_timetable_correctly(timetable)
+
+# ------------------------------
+# Check Sample Output
+# ------------------------------
+def print_nice_timetable(timetable):
+    for section, schedule in timetable.items():
+        print(f"\nSection {section} Timetable:")
+        header = "+-----------+" + "+".join(["----------" for _ in range(PERIODS_PER_DAY)]) + "+"
+        titles = "| Day       |" + "".join([f" Period {i+1}|" for i in range(PERIODS_PER_DAY)])
+        
+        print(header)
+        print(titles)
+        print(header)
+
+        for day in DAYS:
+            row = f"| {day:<9}|"
+            for period in schedule[day]:
+                cell = period if period is not None else "None"
+                row += f" {cell:^8}|"
+            print(row)
+        print(header)
+
+print_nice_timetable(filled_timetable)
