@@ -1,0 +1,64 @@
+# ------------------------------
+# Helper: Check if periods are free (for labs)
+# ------------------------------
+
+def are_periods_free(periods_list, start_index, duration):
+    return start_index + duration <= len(periods_list) and all(periods_list[start_index + i] is None for i in range(duration))
+
+# ------------------------------
+# Fill Timetable for Each Section
+# ------------------------------
+
+def fill_timetable_correctly(timetable):
+    for section in SECTIONS:
+        # Create a copy of the courses dictionary for each section
+        course_hours_left = copy.deepcopy(COURSES)
+
+        # First allocate labs
+        for lab in LAB_COURSES:
+            lab_hours = course_hours_left[lab]['hours_per_week']
+            while lab_hours > 0:
+                day = random.choice(DAYS)
+                periods = timetable[section][day]
+
+                possible_starts = list(range(PERIODS_PER_DAY - 1))  # -1 because labs need 2 consecutive
+                random.shuffle(possible_starts)
+
+                for start in possible_starts:
+                    if are_periods_free(periods, start, 2):
+                        periods[start] = lab
+                        periods[start + 1] = lab
+                        lab_hours -= 2
+                        break
+
+        # Then allocate theory courses
+        for course, data in course_hours_left.items():
+            if course in LAB_COURSES:
+                continue  # already assigned
+
+            hours_needed = data['hours_per_week']
+            while hours_needed > 0:
+                day = random.choice(DAYS)
+                period_idx = random.choice(range(PERIODS_PER_DAY))
+
+                if timetable[section][day][period_idx] is None:
+                    timetable[section][day][period_idx] = course
+                    hours_needed -= 1
+
+    return timetable
+
+# ------------------------------
+# Run Correct Filling
+# ------------------------------
+
+filled_timetable = fill_timetable_correctly(timetable)
+
+# ------------------------------
+# Check Sample Output
+# ------------------------------
+
+for section, schedule in filled_timetable.items():
+    print(f"Section {section}:")
+    for day, periods in schedule.items():
+        print(f"  {day}: {periods}")
+    print("\n") 
