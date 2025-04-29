@@ -1,0 +1,181 @@
+import random
+import copy
+
+# ------------------------------
+# Basic Constants
+# ------------------------------
+
+SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+PERIODS_PER_DAY = 7
+
+# ------------------------------
+# Faculty Assignment per Course
+# ------------------------------
+
+FACULTY_ASSIGNMENTS = {
+    'CN': {
+        'Jobin': ['A', 'B'],
+        'Rajeev': ['C', 'I'],
+        'Sheba': ['D'],
+        'Sonam': ['E', 'F'],
+        'Lokesh': ['G', 'H'],
+    },
+    'Agile': {
+        'Manjul': ['A'],
+        'CVSN': ['B', 'C'],
+        'Vijay': ['D', 'E'],
+        'Manasa': ['G', 'H'],
+        'Hari': ['I'],
+    },
+    'IML': {
+        'Shabeer': ['A', 'B'],
+        'Shoeb': ['C', 'I'],
+        'Suman': ['D', 'H'],
+        'Karthi': ['E'],
+        'Rashika': ['F', 'G'],
+    },
+    'Cloud': {
+        'Aparna': ['A', 'B'],
+        'Sritama': ['C', 'D'],
+        'Ritesh': ['E', 'F'],
+        'Ananya': ['G', 'H', 'I'],
+    },
+    'Calc': {
+        'Sasikala': ['A', 'B'],
+        'Ram': ['C', 'G'],
+        'CSK': ['D', 'E'],
+        'Hongray': ['F'],
+        'Asuthosh': ['H'],
+        'Amrutesh': ['I'],
+    }
+}
+
+# ------------------------------
+# Course Data (faculties now based on section)
+# ------------------------------
+
+COURSES = {
+    'Agile': {'hours_per_week': 2},
+    'CN': {'hours_per_week': 3},
+    'IML': {'hours_per_week': 3},
+    'Cloud': {'hours_per_week': 2},
+    'Calc': {'hours_per_week': 3},
+    'AgileLab': {'hours_per_week': 2},
+    'CNLab': {'hours_per_week': 2},
+    'IMLLab': {'hours_per_week': 2},
+    'CloudLab': {'hours_per_week': 2}
+}
+
+LAB_COURSES = ['AgileLab', 'CNLab', 'IMLLab', 'CloudLab']
+
+# ------------------------------
+# Helpers
+# ------------------------------
+
+def create_empty_timetable():
+    timetable = {}
+    for section in SECTIONS:
+        timetable[section] = {}
+        for day in DAYS:
+            timetable[section][day] = [None for _ in range(PERIODS_PER_DAY)]
+    return timetable
+
+def get_faculty_for_section(course, section):
+    for faculty, sec_list in FACULTY_ASSIGNMENTS.get(course, {}).items():
+        if section in sec_list:
+            return faculty
+    return None
+
+def is_faculty_free(timetable, faculty, day, period):
+    for sec in SECTIONS:
+        for c, f in FACULTY_ASSIGNMENTS.items():
+            for fac, fac_secs in f.items():
+                if fac == faculty and sec in fac_secs:
+                    if timetable[sec][day][period] == c:
+                        return False
+    return True
+
+def are_periods_free(periods_list, start_index, duration):
+    return start_index + duration <= len(periods_list) and all(periods_list[start_index + i] is None for i in range(duration))
+
+# ------------------------------
+# Timetable Filling Function
+# ------------------------------
+
+def fill_timetable_correctly(timetable):
+    for section in SECTIONS:
+        course_hours_left = copy.deepcopy(COURSES)
+
+        # Fixed minor/elective slots
+        for day in ['Tuesday', 'Thursday']:
+            for p in [4, 5, 6]:
+                timetable[section][day][p] = 'Minor'
+        for p in [4, 5, 6]:
+            timetable[section]['Wednesday'][p] = 'Elective'
+
+        # First allocate labs
+        for lab in LAB_COURSES:
+            lab_hours = course_hours_left[lab]['hours_per_week']
+            while lab_hours > 0:
+                day = random.choice(DAYS)
+                periods = timetable[section][day]
+                possible_starts = list(range(PERIODS_PER_DAY - 1))
+                random.shuffle(possible_starts)
+                for start in possible_starts:
+                    if are_periods_free(periods, start, 2):
+                        periods[start] = lab
+                        periods[start + 1] = lab
+                        lab_hours -= 2
+                        break
+
+        # Then allocate theory courses with faculty check
+        for course, data in course_hours_left.items():
+            if course in LAB_COURSES:
+                continue
+            hours_needed = data['hours_per_week']
+            faculty = get_faculty_for_section(course, section)
+            attempts = 0
+            while hours_needed > 0 and attempts < 100:
+                day = random.choice(DAYS)
+                period_idx = random.choice(range(PERIODS_PER_DAY))
+
+                # Skip if Minor/Elective slot
+                if timetable[section][day][period_idx] is not None:
+                    attempts += 1
+                    continue
+
+                if not is_faculty_free(timetable, faculty, day, period_idx):
+                    attempts += 1
+                    continue
+
+                timetable[section][day][period_idx] = course
+                hours_needed -= 1
+    return timetable
+
+# ------------------------------
+# Run and Display
+# ------------------------------
+
+
+timetable = create_empty_timetable()
+filled_timetable = fill_timetable_correctly(timetable)
+
+def print_nice_timetable(timetable):
+    for section, schedule in timetable.items():
+        print(f"\nSection {section} Timetable:")
+        header = "+-----------+" + "+".join(["----------" for _ in range(PERIODS_PER_DAY)]) + "+"
+        titles = "| Day       |" + "".join([f" Period {i+1}|" for i in range(PERIODS_PER_DAY)])
+
+        print(header)
+        print(titles)
+        print(header)
+
+        for day in DAYS:
+            row = f"| {day:<9}|"
+            for period in schedule[day]:
+                cell = period if period is not None else "None"
+                row += f" {cell:^8}|"
+            print(row)
+        print(header)
+print_nice_timetable(filled_timetable)
